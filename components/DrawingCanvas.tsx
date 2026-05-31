@@ -156,6 +156,7 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
   const [selectedStars, setSelectedStars] = useState(0);
   const [hasDrawn,      setHasDrawn]      = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showRef,       setShowRef]       = useState(false);
   const [doStabilize,   setDoStabilize]   = useState(true);
 
   const strokes   = useRef<Stroke[]>([]);
@@ -499,6 +500,10 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
           <p className="text-sm font-semibold text-white/70 truncate">{challenge.title}</p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+          <button onClick={() => setShowRef(v => !v)}
+            className={`px-2 py-1 rounded-lg text-xs border transition-all ${showRef ? "bg-[#2baaee]/20 border-[#2baaee]/40 text-[#2baaee]" : "bg-white/5 border-white/10 text-white/40 hover:text-white"}`}>
+            📖 Ref
+          </button>
           <button onClick={() => setDoStabilize(v => !v)}
             className={`px-2 py-1 rounded-lg text-xs border transition-all ${doStabilize ? "bg-[#2baaee]/20 border-[#2baaee]/40 text-[#2baaee]" : "bg-white/5 border-white/10 text-white/30"}`}>
             ✦ Stable
@@ -597,6 +602,57 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
         </div>
 
         {/* Canvas */}
+        {/* Reference panel */}
+        {showRef && (
+          <div className="w-64 shrink-0 border-l flex flex-col overflow-y-auto"
+            style={{ background: "#1a1a2e", borderColor: "rgba(144,213,255,0.12)" }}>
+            <div className="px-3 py-2.5 border-b flex items-center justify-between"
+              style={{ borderColor: "rgba(144,213,255,0.1)" }}>
+              <span className="text-xs font-bold text-white/70">📖 Reference</span>
+              <button onClick={() => setShowRef(false)} className="text-white/30 hover:text-white text-sm">×</button>
+            </div>
+
+            {/* Reference image */}
+            <div className="p-3">
+              <div className="rounded-xl overflow-hidden border mb-3"
+                style={{ borderColor: "rgba(144,213,255,0.15)", background: "rgba(255,255,255,0.05)" }}>
+                <img
+                  src={challenge.referenceUrl}
+                  alt={challenge.referenceCaption}
+                  className="w-full object-contain"
+                  style={{ maxHeight: 180 }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+                <p className="text-xs text-white/30 text-center py-2 px-2 leading-relaxed">
+                  {challenge.referenceCaption}
+                </p>
+              </div>
+
+              {/* Goal */}
+              <div className="rounded-xl p-3 mb-3"
+                style={{ background: "rgba(43,170,238,0.1)", border: "1px solid rgba(43,170,238,0.2)" }}>
+                <p className="text-xs font-bold text-[#2baaee] mb-1">🎯 Goal</p>
+                <p className="text-xs text-white/55 leading-relaxed">{challenge.goal}</p>
+              </div>
+
+              {/* Tips */}
+              <div>
+                <p className="text-xs font-bold text-white/50 mb-2">💡 Tips</p>
+                <ul className="space-y-2">
+                  {challenge.tips.map((tip, i) => (
+                    <li key={i} className="flex gap-2 text-xs text-white/40 leading-relaxed">
+                      <span className="text-[#2baaee] shrink-0 mt-0.5">→</span>
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div ref={wrapRef} className="flex-1 relative overflow-hidden select-none" style={{ cursor }}>
           <canvas ref={canvasRef}
             width={wrapRef.current?.clientWidth  ?? 1200}

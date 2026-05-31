@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { STAGES } from "@/lib/data";
 import type { Challenge } from "@/lib/data";
@@ -57,7 +57,19 @@ export default function StagePage() {
   const xpNext = getXpForNextLevel(progress);
   const dailyId = getDailyChallenge(progress);
   const done = stage.challenges.filter((c) => isChallengeCompleted(progress, c.id)).length;
+  const prevDone = useRef(done);
   const allDone = done === stage.challenges.length;
+
+  // Fire confetti when stage becomes complete
+  useEffect(() => {
+    if (allDone && prevDone.current !== stage.challenges.length) {
+      import("canvas-confetti").then((mod) => {
+        const c = mod.default;
+        c({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: ["#2baaee","#60a5fa","#fbbf24","#34d399","#a78bfa"] });
+      });
+    }
+    prevDone.current = done;
+  }, [allDone, done, stage.challenges.length]);
 
   function handleComplete(stars: number, dataUrl?: string) {
     if (!selected || !progress) return;

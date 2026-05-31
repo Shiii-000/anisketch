@@ -43,6 +43,9 @@ export default function HomePage() {
             <span className="font-bold tracking-tight text-[#0d1f33]">AniSketch</span>
           </div>
           <div className="flex items-center gap-1">
+            <Link href="/warmup" className="px-3 py-1.5 rounded-lg text-sm text-[#4a7a9b] hover:text-[#0d1f33] hover:bg-[#90D5FF]/20 transition-all">
+              🖊️ Warmup
+            </Link>
             <Link href="/gallery" className="px-3 py-1.5 rounded-lg text-sm text-[#4a7a9b] hover:text-[#0d1f33] hover:bg-[#90D5FF]/20 transition-all">
               Gallery
             </Link>
