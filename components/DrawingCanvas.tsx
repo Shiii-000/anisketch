@@ -171,8 +171,17 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
 
   const W = 2400, H = 1800;
 
-  // ── Init ─────────────────────────────────────────────
+  // ── Init — set canvas size imperatively so React never resets it ──
   useEffect(() => {
+    const canvas = canvasRef.current;
+    const wrap   = wrapRef.current;
+    if (!canvas || !wrap) return;
+
+    // Set visible canvas to container size — only once
+    canvas.width  = wrap.clientWidth  || 1200;
+    canvas.height = wrap.clientHeight || 800;
+
+    // Offscreen at full drawing resolution
     const oc = document.createElement("canvas");
     oc.width = W; oc.height = H;
     const ctx = oc.getContext("2d")!;
@@ -180,6 +189,7 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
     ctx.fillRect(0, 0, W, H);
     offscreen.current = oc;
     composite();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Composite ────────────────────────────────────────
@@ -655,8 +665,6 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
 
         <div ref={wrapRef} className="flex-1 relative overflow-hidden select-none" style={{ cursor }}>
           <canvas ref={canvasRef}
-            width={wrapRef.current?.clientWidth  ?? 1200}
-            height={wrapRef.current?.clientHeight ?? 800}
             className="absolute inset-0 w-full h-full touch-none"
             onMouseDown={pointerDown} onMouseMove={pointerMove}
             onMouseUp={pointerUp}    onMouseLeave={pointerUp}
