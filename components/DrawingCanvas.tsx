@@ -164,7 +164,6 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
   const isDrawing = useRef(false);
   const isPanning = useRef(false);
   const spaceDown = useRef(false);
-  const shiftDown = useRef(false);
   const lastPan   = useRef({ x: 0, y: 0 });
   const panOff    = useRef({ x: 0, y: 0 });
   const prevPos   = useRef<{ x: number; y: number } | null>(null);
@@ -356,12 +355,7 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
       return;
     }
 
-    // Shift = straight line: only keep first + current point
-    if (shiftDown.current && current.current.points.length > 1) {
-      current.current.points = [current.current.points[0], { ...pos, pressure: 0.5, time: Date.now() }];
-    } else {
-      current.current.points.push({ ...pos, pressure: 0.5, time: Date.now() });
-    }
+    current.current.points.push({ ...pos, pressure: 0.5, time: Date.now() });
 
     prevPos.current = pos;
 
@@ -462,7 +456,6 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
     function onKey(e: KeyboardEvent) {
       if (e.target instanceof HTMLInputElement) return;
       if (e.code === "Space")   { spaceDown.current = true;  e.preventDefault(); return; }
-      if (e.code === "ShiftLeft" || e.code === "ShiftRight") { shiftDown.current = true; return; }
       const k = e.key.toLowerCase();
       if ((e.ctrlKey || e.metaKey) && k === "z") { e.preventDefault(); undo(); return; }
       if ((e.ctrlKey || e.metaKey) && k === "y") { e.preventDefault(); redo(); return; }
@@ -482,7 +475,6 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
     }
     function onKeyUp(e: KeyboardEvent) {
       if (e.code === "Space")   { spaceDown.current = false; isPanning.current = false; }
-      if (e.code === "ShiftLeft" || e.code === "ShiftRight") { shiftDown.current = false; }
     }
     window.addEventListener("keydown", onKey);
     window.addEventListener("keyup",   onKeyUp);
@@ -634,7 +626,7 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
                 ["S","Smudge"], ["E","Eraser"], ["F","Fill (bucket)"], ["I","Eyedropper"],
                 ["Z","Undo"], ["X","Redo"], ["Ctrl+Z / Ctrl+Y","Undo / Redo"],
                 ["[ / ]","Size −/+"], ["C","Clear"], ["0","Reset view"],
-                ["H","Flip canvas"], ["Shift+draw","Straight line"],
+                ["H","Flip canvas"],
                 ["Space+drag","Pan"], ["Scroll","Zoom"], ["1–8","Color"],
               ].map(([k, a]) => (
                 <div key={k} className="flex justify-between items-center py-0.5 border-b border-white/5 last:border-0">
