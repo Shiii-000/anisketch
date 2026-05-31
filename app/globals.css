@@ -1,0 +1,98 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+  --radius-2xl: calc(var(--radius) * 2);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #0d1f33;
+  --card: rgba(144,213,255,0.18);
+  --card-foreground: #0d1f33;
+  --popover: #ffffff;
+  --popover-foreground: #0d1f33;
+  --primary: #2baaee;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(144,213,255,0.12);
+  --secondary-foreground: #1a4a6e;
+  --muted: rgba(144,213,255,0.1);
+  --muted-foreground: #4a7a9b;
+  --accent: rgba(144,213,255,0.25);
+  --accent-foreground: #1a4a6e;
+  --destructive: #ef4444;
+  --border: rgba(144,213,255,0.35);
+  --input: rgba(144,213,255,0.15);
+  --ring: #2baaee;
+  --radius: 1rem;
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground font-sans antialiased; }
+}
+
+/* Global background — clean white */
+body {
+  background: #ffffff;
+  min-height: 100vh;
+}
+
+/* Glass card — #90D5FF tinted frosted glass */
+.glass {
+  background: rgba(144, 213, 255, 0.18);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(144, 213, 255, 0.45);
+  box-shadow: 0 2px 16px rgba(43,170,238,0.08), inset 0 1px 0 rgba(255,255,255,0.7);
+}
+
+.glass-hover {
+  transition: all 0.2s ease;
+}
+.glass-hover:hover {
+  background: rgba(144, 213, 255, 0.28);
+  border-color: rgba(43, 170, 238, 0.6);
+  box-shadow: 0 6px 24px rgba(43,170,238,0.15), inset 0 1px 0 rgba(255,255,255,0.8);
+  transform: translateY(-2px);
+}
+
+/* Shine overlay on glass */
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+* { transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 150ms; transition-timing-function: ease; }
