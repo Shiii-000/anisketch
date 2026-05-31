@@ -174,68 +174,39 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
     ctx.lineCap  = "round";
     ctx.lineJoin = "round";
 
-    if (s.tool === "eraser") {
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.strokeStyle = "rgba(0,0,0,1)";
-      ctx.lineWidth = s.size * 8 * (toOffscreen ? 1 : 1 / zoom);
-      ctx.globalAlpha = 1;
+    // Helper: draw one continuous path from pts
+    function path() {
       ctx.beginPath();
       ctx.moveTo(pts[0].x, pts[0].y);
       for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
       ctx.stroke();
+    }
+
+    if (s.tool === "eraser") {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.strokeStyle = "rgba(0,0,0,1)";
+      ctx.lineWidth = s.size * 8;
+      ctx.globalAlpha = 1;
+      path();
     } else if (s.tool === "pen") {
-      // Pen: pressure-sensitive width, sharp edges, full opacity
       ctx.globalAlpha = 1;
       ctx.strokeStyle = s.color;
-      for (let i = 1; i < pts.length; i++) {
-        const p = pts[i];
-        ctx.lineWidth = Math.max(0.5, s.size * p.pressure * 1.4);
-        ctx.beginPath();
-        ctx.moveTo(pts[i - 1].x, pts[i - 1].y);
-        ctx.lineTo(p.x, p.y);
-        ctx.stroke();
-      }
+      ctx.lineWidth = s.size;
+      path();
     } else if (s.tool === "pencil") {
-      // Pencil: textured, slightly transparent, pressure-sensitive
       ctx.strokeStyle = s.color;
-      for (let i = 1; i < pts.length; i++) {
-        const p = pts[i];
-        ctx.globalAlpha = 0.6 + p.pressure * 0.3;
-        ctx.lineWidth = Math.max(0.5, s.size * p.pressure * 1.1);
-        ctx.beginPath();
-        ctx.moveTo(pts[i - 1].x, pts[i - 1].y);
-        ctx.lineTo(p.x, p.y);
-        ctx.stroke();
-        // Pencil grain: tiny scattered dots along the stroke
-        if (Math.random() > 0.6) {
-          ctx.globalAlpha = 0.08 + Math.random() * 0.08;
-          ctx.fillStyle = s.color;
-          ctx.beginPath();
-          ctx.arc(
-            p.x + (Math.random() - 0.5) * s.size * 1.5,
-            p.y + (Math.random() - 0.5) * s.size * 1.5,
-            Math.random() * s.size * 0.4, 0, Math.PI * 2
-          );
-          ctx.fill();
-        }
-      }
+      ctx.globalAlpha = 0.88;
+      ctx.lineWidth = s.size;
+      path();
     } else if (s.tool === "brush") {
-      // Brush: wide, soft, low opacity — builds up with overlapping
       ctx.strokeStyle = s.color;
-      for (let i = 1; i < pts.length; i++) {
-        const p = pts[i];
-        ctx.globalAlpha = 0.04 + p.pressure * 0.06;
-        ctx.lineWidth = Math.max(2, s.size * 4 * p.pressure);
-        ctx.beginPath();
-        ctx.moveTo(pts[i - 1].x, pts[i - 1].y);
-        ctx.lineTo(p.x, p.y);
-        ctx.stroke();
-      }
+      ctx.globalAlpha = 0.4;
+      ctx.lineWidth = s.size * 3.5;
+      path();
     } else if (s.tool === "marker") {
-      // Marker: wide, flat, semi-transparent — highlights/flat fill
       ctx.strokeStyle = s.color;
       ctx.lineWidth = s.size * 5;
-      ctx.globalAlpha = 0.35;
+      ctx.globalAlpha = 0.4;
       ctx.lineCap = "square";
       ctx.beginPath();
       ctx.moveTo(pts[0].x, pts[0].y);
