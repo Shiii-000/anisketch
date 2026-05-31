@@ -346,11 +346,6 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
 
         {/* Canvas */}
         <div className="flex-1 relative overflow-hidden bg-white">
-          {/* Subtle dot grid */}
-          <div className="absolute inset-0 pointer-events-none opacity-40" style={{
-            backgroundImage: "radial-gradient(circle, #90D5FF 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-          }} />
 
           <canvas ref={canvasRef} width={1600} height={1200}
             className="absolute inset-0 w-full h-full touch-none"
