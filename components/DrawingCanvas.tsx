@@ -104,28 +104,8 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
 
     ctx.beginPath();
     ctx.moveTo(s.points[0].x, s.points[0].y);
-
-    if (s.tool === "pencil") {
-      // Pencil: slight jitter + rough feel
-      for (let i = 1; i < s.points.length; i++) {
-        const jx = s.points[i].x + (Math.random() - 0.5) * 0.6;
-        const jy = s.points[i].y + (Math.random() - 0.5) * 0.6;
-        const mx = (s.points[i - 1].x + jx) / 2;
-        const my = (s.points[i - 1].y + jy) / 2;
-        ctx.quadraticCurveTo(s.points[i - 1].x, s.points[i - 1].y, mx, my);
-      }
-    } else if (s.tool === "marker") {
-      // Marker: hard edges, flat lines
-      for (let i = 1; i < s.points.length; i++) {
-        ctx.lineTo(s.points[i].x, s.points[i].y);
-      }
-    } else {
-      // Pen / brush / eraser: smooth bezier
-      for (let i = 1; i < s.points.length; i++) {
-        const mx = (s.points[i - 1].x + s.points[i].x) / 2;
-        const my = (s.points[i - 1].y + s.points[i].y) / 2;
-        ctx.quadraticCurveTo(s.points[i - 1].x, s.points[i - 1].y, mx, my);
-      }
+    for (let i = 1; i < s.points.length; i++) {
+      ctx.lineTo(s.points[i].x, s.points[i].y);
     }
     ctx.stroke();
     ctx.restore();
@@ -185,23 +165,8 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
 
     const i = pts.length - 1;
     ctx.beginPath();
-
-    if (s.tool === "pencil") {
-      const jx = pts[i].x + (Math.random() - 0.5) * 0.6;
-      const jy = pts[i].y + (Math.random() - 0.5) * 0.6;
-      const mx = (pts[i - 1].x + jx) / 2;
-      const my = (pts[i - 1].y + jy) / 2;
-      ctx.moveTo(pts[i - 1].x, pts[i - 1].y);
-      ctx.quadraticCurveTo(pts[i - 1].x, pts[i - 1].y, mx, my);
-    } else if (s.tool === "marker") {
-      ctx.moveTo(pts[i - 1].x, pts[i - 1].y);
-      ctx.lineTo(pts[i].x, pts[i].y);
-    } else {
-      const mx = (pts[i - 1].x + pts[i].x) / 2;
-      const my = (pts[i - 1].y + pts[i].y) / 2;
-      ctx.moveTo(pts[i - 1].x, pts[i - 1].y);
-      ctx.quadraticCurveTo(pts[i - 1].x, pts[i - 1].y, mx, my);
-    }
+    ctx.moveTo(pts[i - 1].x, pts[i - 1].y);
+    ctx.lineTo(pts[i].x, pts[i].y);
     ctx.stroke();
     ctx.restore();
   }
