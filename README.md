@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌸 AniSketch
 
-## Getting Started
+**Turn drawing practice into a game.**  
+Learn to draw step by step — from basic lines to anime art — with XP, levels, challenges and a built-in canvas.
 
-First, run the development server:
+🔗 **Live app:** [anisketch-lemon.vercel.app](https://anisketch-lemon.vercel.app)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## What is AniSketch?
+
+AniSketch is a gamified drawing trainer that makes learning art fun and structured. Instead of staring at a blank page wondering what to practice, AniSketch gives you:
+
+- 📋 **Progressive challenges** — unlock in order, must earn ⭐⭐ to advance
+- 🎨 **Built-in drawing canvas** — draw directly in the app, no external tools needed
+- 📖 **Reference examples** — every challenge has a goal, tips, and an example image
+- ⚡ **XP & levels** — earn points for completing challenges
+- 🔥 **Daily challenges** — a new challenge every day to keep you consistent
+- 🏆 **Achievements** — unlock badges as you improve
+- 🎲 **Prompt generator** — random drawing prompts for extra practice
+
+---
+
+## Learning Path
+
+```
+Stage 1 — Lines & Control      (unlocked from the start)
+Stage 2 — Basic Shapes         (Level 2)
+Stage 3 — Form & 3D            (Level 4)
+Stage 4 — Perspective          (Level 7)
+Stage 5 — Light & Shadow       (Level 10)
+Stage 6 — Texture & Detail     (Level 13)
+Stage 7 — Anime Fundamentals   (Level 16)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Running locally
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Requirements:** Node.js 18+
 
-## Learn More
+```bash
+# Clone the repo
+git clone https://github.com/Shiii-000/anisketch.git
+cd anisketch
 
-To learn more about Next.js, take a look at the following resources:
+# Install dependencies
+npm install
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Start the dev server
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Tech stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Part | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| Styling | Tailwind CSS v4 + shadcn/ui |
+| Drawing canvas | HTML5 Canvas API |
+| Progress storage | localStorage (browser) |
+| Deployment | Vercel |
+
+---
+
+## Contributing
+
+Pull requests are welcome! If you have ideas for new challenges, stages, or features feel free to open an issue.
+
+---
+
+## License
+
+MIT
