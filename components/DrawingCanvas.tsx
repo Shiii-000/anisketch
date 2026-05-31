@@ -9,16 +9,14 @@ interface Props {
   onClose: () => void;
 }
 
-type Tool = "pencil" | "pen" | "brush" | "eraser" | "line" | "circle" | "rect";
+type Tool = "pencil" | "pen" | "brush" | "marker" | "eraser";
 
 interface Stroke {
   tool: Tool;
   color: string;
   size: number;
+  opacity: number;
   points: { x: number; y: number }[];
-  // for shape tools
-  start?: { x: number; y: number };
-  end?: { x: number; y: number };
 }
 
 const RATINGS = [
@@ -33,127 +31,106 @@ const COLORS = [
   "#f472b6", "#fb923c", "#ffffff", "#000000",
 ];
 
-const TOOL_ICONS: Record<Tool, string> = {
-  pencil: "✏️", pen: "🖊️", brush: "🖌️",
-  eraser: "⬜", line: "📏", circle: "⭕", rect: "▭",
+const TOOLS: { id: Tool; icon: string; label: string; shortcut: string }[] = [
+  { id: "pencil",  icon: "✏️", label: "Pencil",  shortcut: "P" },
+  { id: "pen",     icon: "🖊️", label: "Pen",     shortcut: "N" },
+  { id: "brush",   icon: "🖌️", label: "Brush",   shortcut: "B" },
+  { id: "marker",  icon: "🖍️", label: "Marker",  shortcut: "M" },
+  { id: "eraser",  icon: "⬜", label: "Eraser",  shortcut: "E" },
+];
+
+const SHORTCUTS: Record<string, Tool> = {
+  p: "pencil", n: "pen", b: "brush", m: "marker", e: "eraser",
 };
 
-const SHORTCUTS: Record<string, string> = {
-  p: "pencil", n: "pen", b: "brush", e: "eraser",
-  l: "line", o: "circle", r: "rect",
-};
+// Tool rendering settings
+function getToolStyle(tool: Tool, color: string, size: number) {
+  switch (tool) {
+    case "pencil":
+      return { strokeStyle: color, lineWidth: size, globalAlpha: 0.82, lineCap: "round" as const, lineJoin: "round" as const };
+    case "pen":
+      return { strokeStyle: color, lineWidth: size * 0.8, globalAlpha: 1, lineCap: "round" as const, lineJoin: "round" as const };
+    case "brush":
+      return { strokeStyle: color, lineWidth: size * 3, globalAlpha: 0.55, lineCap: "round" as const, lineJoin: "round" as const };
+    case "marker":
+      return { strokeStyle: color, lineWidth: size * 4, globalAlpha: 0.4, lineCap: "square" as const, lineJoin: "miter" as const };
+    case "eraser":
+      return { strokeStyle: "#ffffff", lineWidth: size * 6, globalAlpha: 1, lineCap: "round" as const, lineJoin: "round" as const };
+  }
+}
 
 export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const previewRef = useRef<HTMLCanvasElement>(null);
-  const [tool, setTool] = useState<Tool>("pencil");
+  const canvasRef   = useRef<HTMLCanvasElement>(null);
+  const [tool, setTool]   = useState<Tool>("pencil");
   const [color, setColor] = useState("#1a1a2e");
-  const [size, setSize] = useState(3);
-  const [showRating, setShowRating] = useState(false);
+  const [size, setSize]   = useState(3);
+  const [showRating, setShowRating]       = useState(false);
   const [selectedStars, setSelectedStars] = useState(0);
-  const [hasDrawn, setHasDrawn] = useState(false);
+  const [hasDrawn, setHasDrawn]           = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
-  const strokes = useRef<Stroke[]>([]);
-  const redoStack = useRef<Stroke[]>([]);
-  const currentStroke = useRef<Stroke | null>(null);
-  const isDrawing = useRef(false);
-  const dragStart = useRef<{ x: number; y: number } | null>(null);
+  const strokes    = useRef<Stroke[]>([]);
+  const redoStack  = useRef<Stroke[]>([]);
+  const current    = useRef<Stroke | null>(null);
+  const isDrawing  = useRef(false);
 
-  // ── Init canvas ──────────────────────────────────────────
+  // Init white background
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx || !canvasRef.current) return;
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
   }, []);
 
-  // ── Redraw all strokes ───────────────────────────────────
+  // Full redraw from stroke history
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    for (const stroke of strokes.current) drawStroke(ctx, stroke, false);
+    for (const s of strokes.current) renderStroke(ctx, s);
   }, []);
 
-  function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke, isPreview: boolean) {
+  function renderStroke(ctx: CanvasRenderingContext2D, s: Stroke) {
+    if (s.points.length < 2) return;
+    const style = getToolStyle(s.tool, s.color, s.size);
     ctx.save();
-    ctx.strokeStyle = stroke.tool === "eraser" ? "#ffffff" : stroke.color;
-    ctx.lineWidth = stroke.tool === "eraser" ? stroke.size * 5 : stroke.size;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
+    ctx.strokeStyle = style.strokeStyle;
+    ctx.lineWidth   = style.lineWidth;
+    ctx.globalAlpha = style.globalAlpha;
+    ctx.lineCap     = style.lineCap;
+    ctx.lineJoin    = style.lineJoin;
 
-    if (stroke.tool === "pencil") {
-      ctx.globalAlpha = 0.85;
-      // Simulate pencil texture with slight jitter
-      ctx.setLineDash([1, 0]);
-    } else if (stroke.tool === "brush") {
-      ctx.globalAlpha = 0.7;
-      ctx.lineWidth = stroke.size * 2.5;
-    } else if (stroke.tool === "pen") {
-      ctx.globalAlpha = 1;
-      ctx.lineWidth = stroke.size;
-    } else {
-      ctx.globalAlpha = 1;
-    }
+    ctx.beginPath();
+    ctx.moveTo(s.points[0].x, s.points[0].y);
 
-    if (stroke.tool === "line" && stroke.start && stroke.end) {
-      ctx.beginPath();
-      ctx.moveTo(stroke.start.x, stroke.start.y);
-      ctx.lineTo(stroke.end.x, stroke.end.y);
-      ctx.stroke();
-    } else if (stroke.tool === "circle" && stroke.start && stroke.end) {
-      const rx = Math.abs(stroke.end.x - stroke.start.x) / 2;
-      const ry = Math.abs(stroke.end.y - stroke.start.y) / 2;
-      const cx = (stroke.start.x + stroke.end.x) / 2;
-      const cy = (stroke.start.y + stroke.end.y) / 2;
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-      ctx.stroke();
-    } else if (stroke.tool === "rect" && stroke.start && stroke.end) {
-      ctx.beginPath();
-      ctx.strokeRect(
-        stroke.start.x, stroke.start.y,
-        stroke.end.x - stroke.start.x,
-        stroke.end.y - stroke.start.y
-      );
-    } else if (stroke.points.length > 0) {
-      ctx.beginPath();
-      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-      for (let i = 1; i < stroke.points.length; i++) {
-        if (stroke.tool === "pencil" && i % 2 === 0) {
-          // Slight jitter for pencil texture
-          const jx = stroke.points[i].x + (Math.random() - 0.5) * 0.5;
-          const jy = stroke.points[i].y + (Math.random() - 0.5) * 0.5;
-          ctx.lineTo(jx, jy);
-        } else {
-          const mid = {
-            x: (stroke.points[i - 1].x + stroke.points[i].x) / 2,
-            y: (stroke.points[i - 1].y + stroke.points[i].y) / 2,
-          };
-          ctx.quadraticCurveTo(stroke.points[i - 1].x, stroke.points[i - 1].y, mid.x, mid.y);
-        }
+    if (s.tool === "pencil") {
+      // Pencil: slight jitter + rough feel
+      for (let i = 1; i < s.points.length; i++) {
+        const jx = s.points[i].x + (Math.random() - 0.5) * 0.6;
+        const jy = s.points[i].y + (Math.random() - 0.5) * 0.6;
+        const mx = (s.points[i - 1].x + jx) / 2;
+        const my = (s.points[i - 1].y + jy) / 2;
+        ctx.quadraticCurveTo(s.points[i - 1].x, s.points[i - 1].y, mx, my);
       }
-      ctx.stroke();
+    } else if (s.tool === "marker") {
+      // Marker: hard edges, flat lines
+      for (let i = 1; i < s.points.length; i++) {
+        ctx.lineTo(s.points[i].x, s.points[i].y);
+      }
+    } else {
+      // Pen / brush / eraser: smooth bezier
+      for (let i = 1; i < s.points.length; i++) {
+        const mx = (s.points[i - 1].x + s.points[i].x) / 2;
+        const my = (s.points[i - 1].y + s.points[i].y) / 2;
+        ctx.quadraticCurveTo(s.points[i - 1].x, s.points[i - 1].y, mx, my);
+      }
     }
+    ctx.stroke();
     ctx.restore();
   }
 
-  // ── Preview canvas for shape tools ──────────────────────
-  function drawPreview(end: { x: number; y: number }) {
-    const preview = previewRef.current;
-    if (!preview || !dragStart.current) return;
-    const ctx = preview.getContext("2d")!;
-    ctx.clearRect(0, 0, preview.width, preview.height);
-    if (!currentStroke.current) return;
-    const s = { ...currentStroke.current, start: dragStart.current, end };
-    drawStroke(ctx, s, true);
-  }
-
-  // ── Get pointer position ─────────────────────────────────
   function getPos(e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -170,84 +147,81 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
     setHasDrawn(true);
     redoStack.current = [];
     const pos = getPos(e, canvas);
-    const isShape = tool === "line" || tool === "circle" || tool === "rect";
-    currentStroke.current = { tool, color, size, points: isShape ? [] : [pos], start: pos };
-    if (!isShape) {
-      const ctx = canvas.getContext("2d")!;
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, tool === "eraser" ? size * 2.5 : size / 2, 0, Math.PI * 2);
-      ctx.fillStyle = tool === "eraser" ? "#ffffff" : color;
-      ctx.fill();
-    }
-    dragStart.current = pos;
+    current.current = { tool, color, size, opacity: 1, points: [pos] };
+
+    // Draw a dot for the starting point
+    const ctx = canvas.getContext("2d")!;
+    const style = getToolStyle(tool, color, size);
+    ctx.save();
+    ctx.fillStyle = style.strokeStyle;
+    ctx.globalAlpha = style.globalAlpha;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, style.lineWidth / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
   function pointerMove(e: React.MouseEvent | React.TouchEvent) {
-    if (!isDrawing.current || !currentStroke.current) return;
+    if (!isDrawing.current || !current.current) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     e.preventDefault();
     const pos = getPos(e, canvas);
-    const isShape = tool === "line" || tool === "circle" || tool === "rect";
+    current.current.points.push(pos);
 
-    if (isShape) {
-      drawPreview(pos);
-    } else {
-      currentStroke.current.points.push(pos);
-      // Draw incrementally for performance
-      const ctx = canvas.getContext("2d")!;
-      const pts = currentStroke.current.points;
-      if (pts.length < 2) return;
-      ctx.save();
-      ctx.strokeStyle = tool === "eraser" ? "#ffffff" : color;
-      ctx.lineWidth = tool === "eraser" ? size * 5 : tool === "brush" ? size * 2.5 : size;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.globalAlpha = tool === "brush" ? 0.7 : tool === "pencil" ? 0.85 : 1;
-      ctx.beginPath();
-      const i = pts.length - 1;
-      const mid = { x: (pts[i - 1].x + pts[i].x) / 2, y: (pts[i - 1].y + pts[i].y) / 2 };
+    // Draw incrementally
+    const pts = current.current.points;
+    if (pts.length < 2) return;
+    const ctx = canvas.getContext("2d")!;
+    const s = current.current;
+    const style = getToolStyle(s.tool, s.color, s.size);
+
+    ctx.save();
+    ctx.strokeStyle = style.strokeStyle;
+    ctx.lineWidth   = style.lineWidth;
+    ctx.globalAlpha = style.globalAlpha;
+    ctx.lineCap     = style.lineCap;
+    ctx.lineJoin    = style.lineJoin;
+
+    const i = pts.length - 1;
+    ctx.beginPath();
+
+    if (s.tool === "pencil") {
+      const jx = pts[i].x + (Math.random() - 0.5) * 0.6;
+      const jy = pts[i].y + (Math.random() - 0.5) * 0.6;
+      const mx = (pts[i - 1].x + jx) / 2;
+      const my = (pts[i - 1].y + jy) / 2;
       ctx.moveTo(pts[i - 1].x, pts[i - 1].y);
-      ctx.quadraticCurveTo(pts[i - 1].x, pts[i - 1].y, mid.x, mid.y);
-      ctx.stroke();
-      ctx.restore();
+      ctx.quadraticCurveTo(pts[i - 1].x, pts[i - 1].y, mx, my);
+    } else if (s.tool === "marker") {
+      ctx.moveTo(pts[i - 1].x, pts[i - 1].y);
+      ctx.lineTo(pts[i].x, pts[i].y);
+    } else {
+      const mx = (pts[i - 1].x + pts[i].x) / 2;
+      const my = (pts[i - 1].y + pts[i].y) / 2;
+      ctx.moveTo(pts[i - 1].x, pts[i - 1].y);
+      ctx.quadraticCurveTo(pts[i - 1].x, pts[i - 1].y, mx, my);
     }
+    ctx.stroke();
+    ctx.restore();
   }
 
-  function pointerUp(e: React.MouseEvent | React.TouchEvent) {
-    if (!isDrawing.current || !currentStroke.current) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  function pointerUp() {
+    if (!isDrawing.current || !current.current) return;
     isDrawing.current = false;
-    const pos = getPos(e, canvas);
-    const isShape = tool === "line" || tool === "circle" || tool === "rect";
-
-    if (isShape) {
-      currentStroke.current.end = pos;
-      const ctx = canvas.getContext("2d")!;
-      drawStroke(ctx, currentStroke.current, false);
-      // Clear preview
-      const preview = previewRef.current;
-      if (preview) preview.getContext("2d")!.clearRect(0, 0, preview.width, preview.height);
-    }
-
-    strokes.current.push({ ...currentStroke.current });
-    currentStroke.current = null;
-    dragStart.current = null;
+    strokes.current.push({ ...current.current, points: [...current.current.points] });
+    current.current = null;
   }
 
-  // ── Undo / Redo ──────────────────────────────────────────
   const undo = useCallback(() => {
-    if (strokes.current.length === 0) return;
-    const last = strokes.current.pop()!;
-    redoStack.current.push(last);
+    if (!strokes.current.length) return;
+    redoStack.current.push(strokes.current.pop()!);
     redraw();
   }, [redraw]);
 
   const redo = useCallback(() => {
-    if (redoStack.current.length === 0) return;
-    const next = redoStack.current.pop()!;
-    strokes.current.push(next);
+    if (!redoStack.current.length) return;
+    strokes.current.push(redoStack.current.pop()!);
     redraw();
   }, [redraw]);
 
@@ -258,41 +232,37 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
     setHasDrawn(false);
   }
 
-  // ── Keyboard shortcuts ───────────────────────────────────
+  // Keyboard shortcuts
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.target instanceof HTMLInputElement) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       const k = e.key.toLowerCase();
-      if (SHORTCUTS[k]) { setTool(SHORTCUTS[k] as Tool); return; }
-      if (k === "z" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); undo(); return; }
-      if (k === "y" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); redo(); return; }
+
+      if ((e.ctrlKey || e.metaKey) && k === "z") { e.preventDefault(); undo(); return; }
+      if ((e.ctrlKey || e.metaKey) && k === "y") { e.preventDefault(); redo(); return; }
+
+      if (SHORTCUTS[k]) { setTool(SHORTCUTS[k]); return; }
       if (k === "z" && !e.ctrlKey && !e.metaKey) { undo(); return; }
       if (k === "x") { redo(); return; }
-      if (k === "[") setSize((s) => Math.max(1, s - 1));
-      if (k === "]") setSize((s) => Math.min(30, s + 1));
-      if (k === "c" && !e.ctrlKey) clearCanvas();
-      // Color shortcuts 1-8
+      if (k === "[") setSize(s => Math.max(1, s - 1));
+      if (k === "]") setSize(s => Math.min(30, s + 1));
+      if (k === "c" && !e.ctrlKey && !e.metaKey) clearCanvas();
       const idx = parseInt(k) - 1;
-      if (!isNaN(idx) && idx >= 0 && idx < COLORS.length) setColor(COLORS[idx]);
+      if (!isNaN(idx) && idx >= 0 && idx < COLORS.length) {
+        setColor(COLORS[idx]);
+        if (tool === "eraser") setTool("pencil");
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [undo, redo]);
+  }, [undo, redo, tool]);
 
-  const toolCursor: Record<Tool, string> = {
-    pencil: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z' fill='%231a1a2e'/%3E%3C/svg%3E\") 0 24, crosshair",
-    pen: "crosshair",
-    brush: "crosshair",
-    eraser: "cell",
-    line: "crosshair",
-    circle: "crosshair",
-    rect: "crosshair",
-  };
+  const cursor = tool === "eraser" ? "cell" : "crosshair";
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#f8fafd]">
 
-      {/* ── Top bar ── */}
+      {/* Top bar */}
       <div className="border-b border-[#90D5FF]/30 bg-white px-4 h-14 flex items-center justify-between shrink-0 gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={onClose} className="text-[#4a7a9b] hover:text-[#0d1f33] text-sm transition-colors shrink-0">← Back</button>
@@ -324,37 +294,38 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
         </div>
       </div>
 
-      {/* ── Challenge strip ── */}
+      {/* Challenge strip */}
       <div className="bg-[#90D5FF]/10 border-b border-[#90D5FF]/20 px-4 py-2 shrink-0">
         <p className="text-xs text-[#4a7a9b] leading-relaxed">{challenge.description}</p>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
 
-        {/* ── Left toolbar ── */}
+        {/* Left toolbar */}
         <div className="w-14 border-r border-[#90D5FF]/20 bg-white flex flex-col items-center py-3 gap-1.5 shrink-0 overflow-y-auto">
-          {(Object.keys(TOOL_ICONS) as Tool[]).map((t) => (
-            <button key={t} onClick={() => setTool(t)} title={`${t} (${Object.entries(SHORTCUTS).find(([, v]) => v === t)?.[0] ?? ""})`}
+
+          {/* Tools */}
+          {TOOLS.map((t) => (
+            <button key={t.id} onClick={() => setTool(t.id)}
+              title={`${t.label} (${t.shortcut})`}
               className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-all ${
-                tool === t
-                  ? "bg-[#2baaee] shadow-sm"
-                  : "hover:bg-[#90D5FF]/20 text-[#4a7a9b]"
+                tool === t.id ? "bg-[#2baaee] shadow-sm scale-105" : "hover:bg-[#90D5FF]/20"
               }`}>
-              {TOOL_ICONS[t]}
+              {t.icon}
             </button>
           ))}
 
           <div className="w-8 h-px bg-[#90D5FF]/30 my-1" />
 
-          {/* Color swatches */}
+          {/* Colors */}
           {COLORS.map((c, i) => (
             <button key={c} onClick={() => { setColor(c); if (tool === "eraser") setTool("pencil"); }}
               title={`Color ${i + 1}`}
               className="w-7 h-7 rounded-full border-2 transition-all"
               style={{
                 background: c,
-                borderColor: color === c ? "#2baaee" : "rgba(144,213,255,0.4)",
-                transform: color === c ? "scale(1.2)" : "scale(1)",
+                borderColor: color === c && tool !== "eraser" ? "#2baaee" : "rgba(144,213,255,0.4)",
+                transform: color === c && tool !== "eraser" ? "scale(1.25)" : "scale(1)",
                 boxShadow: c === "#ffffff" ? "inset 0 0 0 1px rgba(0,0,0,0.15)" : "none",
               }} />
           ))}
@@ -362,79 +333,70 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
           <div className="w-8 h-px bg-[#90D5FF]/30 my-1" />
 
           {/* Size */}
-          <div className="flex flex-col items-center gap-1">
-            <button onClick={() => setSize(s => Math.max(1, s - 1))}
-              className="w-7 h-7 rounded-lg text-xs text-[#4a7a9b] hover:bg-[#90D5FF]/20 font-bold transition-all">−</button>
-            <div className="w-7 h-7 rounded-full flex items-center justify-center bg-[#90D5FF]/10 border border-[#90D5FF]/30">
-              <div className="rounded-full bg-[#1a1a2e]"
-                style={{ width: Math.min(20, Math.max(2, size)), height: Math.min(20, Math.max(2, size)) }} />
-            </div>
-            <button onClick={() => setSize(s => Math.min(30, s + 1))}
-              className="w-7 h-7 rounded-lg text-xs text-[#4a7a9b] hover:bg-[#90D5FF]/20 font-bold transition-all">+</button>
-            <span className="text-xs text-[#4a7a9b]">{size}</span>
+          <button onClick={() => setSize(s => Math.min(30, s + 1))}
+            className="w-7 h-7 rounded-lg text-sm text-[#4a7a9b] hover:bg-[#90D5FF]/20 font-bold transition-all">+</button>
+          <div className="w-7 h-7 rounded-full flex items-center justify-center bg-[#90D5FF]/10 border border-[#90D5FF]/30">
+            <div className="rounded-full bg-[#1a1a2e]"
+              style={{ width: Math.min(22, Math.max(2, size * 1.5)), height: Math.min(22, Math.max(2, size * 1.5)) }} />
           </div>
+          <button onClick={() => setSize(s => Math.max(1, s - 1))}
+            className="w-7 h-7 rounded-lg text-sm text-[#4a7a9b] hover:bg-[#90D5FF]/20 font-bold transition-all">−</button>
+          <span className="text-xs text-[#4a7a9b]">{size}</span>
         </div>
 
-        {/* ── Canvas ── */}
-        <div className="flex-1 relative overflow-hidden bg-slate-100">
-          {/* Grid background */}
-          <div className="absolute inset-0 pointer-events-none" style={{
-            backgroundImage: "radial-gradient(circle, rgba(144,213,255,0.3) 1px, transparent 1px)",
-            backgroundSize: "24px 24px",
+        {/* Canvas */}
+        <div className="flex-1 relative overflow-hidden bg-white">
+          {/* Subtle dot grid */}
+          <div className="absolute inset-0 pointer-events-none opacity-40" style={{
+            backgroundImage: "radial-gradient(circle, #90D5FF 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
           }} />
 
           <canvas ref={canvasRef} width={1600} height={1200}
             className="absolute inset-0 w-full h-full touch-none"
-            style={{ cursor: toolCursor[tool] }}
+            style={{ cursor }}
             onMouseDown={pointerDown} onMouseMove={pointerMove}
-            onMouseUp={pointerUp} onMouseLeave={pointerUp}
+            onMouseUp={pointerUp}   onMouseLeave={pointerUp}
             onTouchStart={pointerDown} onTouchMove={pointerMove} onTouchEnd={pointerUp} />
-
-          {/* Preview canvas for shape tools */}
-          <canvas ref={previewRef} width={1600} height={1200}
-            className="absolute inset-0 w-full h-full pointer-events-none" />
 
           {!hasDrawn && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center">
-                <p className="text-4xl mb-2">✏️</p>
-                <p className="text-[#4a7a9b] text-sm">Start drawing here</p>
-                <p className="text-[#90D5FF] text-xs mt-1">Press ⌨️ Shortcuts to see keyboard shortcuts</p>
+                <p className="text-5xl mb-3">✏️</p>
+                <p className="text-[#4a7a9b] text-sm font-medium">Start drawing here</p>
+                <p className="text-[#90D5FF] text-xs mt-1">Press ⌨️ Shortcuts for keyboard shortcuts</p>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Shortcuts panel ── */}
+      {/* Shortcuts panel */}
       {showShortcuts && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4"
           style={{ background: "rgba(144,213,255,0.2)", backdropFilter: "blur(8px)" }}>
-          <div className="glass bg-white/90 rounded-2xl p-6 max-w-sm w-full shadow-xl">
+          <div className="glass bg-white/95 rounded-2xl p-6 max-w-xs w-full shadow-xl">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-[#0d1f33]">⌨️ Keyboard Shortcuts</h3>
-              <button onClick={() => setShowShortcuts(false)} className="text-[#4a7a9b] text-xl">×</button>
+              <h3 className="font-bold text-[#0d1f33]">⌨️ Shortcuts</h3>
+              <button onClick={() => setShowShortcuts(false)} className="text-[#4a7a9b] text-xl leading-none">×</button>
             </div>
-            <div className="space-y-2 text-sm">
+            <div className="space-y-1.5 text-sm">
               {[
-                ["P", "Pencil"],
-                ["N", "Pen"],
-                ["B", "Brush"],
+                ["P", "Pencil — textured"],
+                ["N", "Pen — smooth"],
+                ["B", "Brush — soft & wide"],
+                ["M", "Marker — flat & opaque"],
                 ["E", "Eraser"],
-                ["L", "Line tool"],
-                ["O", "Circle tool"],
-                ["R", "Rectangle tool"],
                 ["Z", "Undo last stroke"],
                 ["X", "Redo"],
-                ["Ctrl+Z", "Undo"],
-                ["Ctrl+Y", "Redo"],
-                ["[ / ]", "Decrease / Increase size"],
+                ["Ctrl+Z / Ctrl+Y", "Undo / Redo"],
+                ["[ / ]", "Size −/+"],
                 ["C", "Clear canvas"],
-                ["1–8", "Switch to color 1–8"],
-              ].map(([key, action]) => (
-                <div key={key} className="flex justify-between items-center py-1 border-b border-[#90D5FF]/20">
-                  <span className="text-[#4a7a9b]">{action}</span>
-                  <kbd className="px-2 py-0.5 rounded-lg bg-[#90D5FF]/20 text-[#0d1f33] font-mono text-xs border border-[#90D5FF]/30">{key}</kbd>
+                ["1 – 8", "Switch color"],
+              ].map(([k, a]) => (
+                <div key={k} className="flex justify-between items-center py-1 border-b border-[#90D5FF]/20 last:border-0">
+                  <span className="text-[#4a7a9b] text-xs">{a}</span>
+                  <kbd className="px-2 py-0.5 rounded-lg bg-[#90D5FF]/20 text-[#0d1f33] font-mono text-xs border border-[#90D5FF]/30 shrink-0 ml-2">{k}</kbd>
                 </div>
               ))}
             </div>
@@ -442,13 +404,13 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
         </div>
       )}
 
-      {/* ── Rating modal ── */}
+      {/* Rating modal */}
       {showRating && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4"
           style={{ background: "rgba(144,213,255,0.3)", backdropFilter: "blur(12px)" }}>
           <div className="glass relative rounded-2xl w-full max-w-sm p-6 overflow-hidden bg-white/90">
             <h3 className="font-bold text-lg text-[#0d1f33] mb-1">How did it go?</h3>
-            <p className="text-sm text-[#4a7a9b] mb-5">Rate your attempt honestly — this affects what unlocks next.</p>
+            <p className="text-sm text-[#4a7a9b] mb-5">Rate yourself honestly — this affects what unlocks next.</p>
             <div className="grid grid-cols-3 gap-2 mb-5">
               {RATINGS.map((r) => (
                 <button key={r.stars} onClick={() => setSelectedStars(r.stars)}
