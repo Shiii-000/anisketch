@@ -38,8 +38,15 @@ export const ACHIEVEMENTS: Achievement[] = [
     emoji: "🏆",
     check: (p) => {
       const total = STAGES.flatMap((s) => s.challenges).length;
-      return p.completedChallenges.length >= total;
+      return p.completedChallenges.filter(c => c.stars >= 2).length >= total;
     },
+  },
+  {
+    id: "final_boss",
+    title: "Original Artist",
+    description: "Complete the Final OC Reveal challenge",
+    emoji: "🌸",
+    check: (p) => p.completedChallenges.some(c => c.challengeId === "s15c6" && c.stars >= 2),
   },
   {
     id: "level_5",
@@ -61,6 +68,13 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: "Reach Level 16 and unlock anime stages",
     emoji: "🎌",
     check: (p) => getLevel(p) >= 16,
+  },
+  {
+    id: "level_25",
+    title: "Character Creator",
+    description: "Reach Level 25 and unlock the Full Character stage",
+    emoji: "👑",
+    check: (p) => getLevel(p) >= 25,
   },
   {
     id: "streak_3",
