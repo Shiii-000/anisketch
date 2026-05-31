@@ -32,9 +32,31 @@ export default function StagePage() {
   const [showRef, setShowRef] = useState<Challenge | null>(null);
   const [drawingChallenge, setDrawingChallenge] = useState<Challenge | null>(null);
 
+  const prevDoneRef = useRef(0);
+
   useEffect(() => { setProgress(loadProgress()); }, []);
 
   const stage = STAGES.find((s) => s.id === id);
+
+  const level    = progress ? getLevel(progress) : 0;
+  const xpIn     = progress ? getXpIntoLevel(progress) : 0;
+  const xpNext   = progress ? getXpForNextLevel(progress) : 100;
+  const dailyId  = progress ? getDailyChallenge(progress) : "";
+  const done     = (progress && stage) ? stage.challenges.filter((c) => isChallengeCompleted(progress, c.id)).length : 0;
+  const allDone  = stage ? done === stage.challenges.length : false;
+
+  // Fire confetti when stage becomes complete — all hooks before any return
+  useEffect(() => {
+    if (!stage) return;
+    if (allDone && prevDoneRef.current !== stage.challenges.length) {
+      import("canvas-confetti").then((mod) => {
+        const c = mod.default;
+        c({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: ["#2baaee","#60a5fa","#fbbf24","#34d399","#a78bfa"] });
+      });
+    }
+    prevDoneRef.current = done;
+  }, [allDone, done, stage]);
+
   if (!progress || !stage) return (
     <div className="min-h-screen flex items-center justify-center text-[#4a7a9b] text-sm">Loading…</div>
   );
@@ -51,25 +73,6 @@ export default function StagePage() {
       </div>
     );
   }
-
-  const level = getLevel(progress);
-  const xpIn = getXpIntoLevel(progress);
-  const xpNext = getXpForNextLevel(progress);
-  const dailyId = getDailyChallenge(progress);
-  const done = stage.challenges.filter((c) => isChallengeCompleted(progress, c.id)).length;
-  const prevDone = useRef(done);
-  const allDone = done === stage.challenges.length;
-
-  // Fire confetti when stage becomes complete
-  useEffect(() => {
-    if (allDone && prevDone.current !== stage.challenges.length) {
-      import("canvas-confetti").then((mod) => {
-        const c = mod.default;
-        c({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: ["#2baaee","#60a5fa","#fbbf24","#34d399","#a78bfa"] });
-      });
-    }
-    prevDone.current = done;
-  }, [allDone, done, stage.challenges.length]);
 
   function handleComplete(stars: number, dataUrl?: string) {
     if (!selected || !progress) return;
