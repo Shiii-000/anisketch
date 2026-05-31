@@ -15,6 +15,7 @@ import XpBar from "@/components/XpBar";
 import CompleteModal from "@/components/CompleteModal";
 import LevelUpModal from "@/components/LevelUpModal";
 import AchievementToast from "@/components/AchievementToast";
+import DrawingCanvas from "@/components/DrawingCanvas";
 
 const DIFF_LABEL = ["", "Easy", "Medium", "Hard"];
 const DIFF_COLOR = ["", "text-emerald-600", "text-amber-600", "text-red-500"];
@@ -28,6 +29,7 @@ export default function StagePage() {
   const [xpToast, setXpToast] = useState<string | null>(null);
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
   const [showRef, setShowRef] = useState<Challenge | null>(null);
+  const [drawingChallenge, setDrawingChallenge] = useState<Challenge | null>(null);
 
   useEffect(() => { setProgress(loadProgress()); }, []);
 
@@ -181,7 +183,7 @@ export default function StagePage() {
                         📖 See Example
                       </button>
                       <button
-                        onClick={() => setSelected(c)}
+                        onClick={() => setDrawingChallenge(c)}
                         className="flex-1 py-2 rounded-xl text-xs font-bold text-white transition-all"
                         style={{ background: "linear-gradient(135deg,#2baaee,#60a5fa)" }}
                       >
@@ -247,7 +249,7 @@ export default function StagePage() {
               </div>
 
               <button
-                onClick={() => { setShowRef(null); setSelected(showRef); }}
+                onClick={() => { setShowRef(null); setDrawingChallenge(showRef); }}
                 className="w-full py-3 rounded-xl text-white font-bold text-sm"
                 style={{ background: "linear-gradient(135deg,#2baaee,#60a5fa)" }}
               >
@@ -266,7 +268,19 @@ export default function StagePage() {
         </div>
       )}
 
-      {selected && (
+      {drawingChallenge && (
+        <DrawingCanvas
+          challenge={drawingChallenge}
+          onSubmit={(stars) => {
+            setSelected(drawingChallenge);
+            setDrawingChallenge(null);
+            handleComplete(stars);
+          }}
+          onClose={() => setDrawingChallenge(null)}
+        />
+      )}
+
+      {selected && !drawingChallenge && (
         <CompleteModal challenge={selected} alreadyDone={isChallengeAttempted(progress, selected.id)}
           onComplete={handleComplete} onClose={() => setSelected(null)} />
       )}
