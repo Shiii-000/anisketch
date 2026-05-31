@@ -8,6 +8,7 @@ import {
   loadProgress, saveProgress, UserProgress, getLevel, getXpIntoLevel, getXpForNextLevel,
   isChallengeCompleted, isChallengeAttempted, getChallengeStars, completeChallenge,
   getDailyChallenge, isStageUnlocked, isChallengeUnlocked, getChallengeStatus,
+  saveDrawing,
 } from "@/lib/progress";
 import { getNewAchievements } from "@/lib/achievements";
 import type { Achievement } from "@/lib/achievements";
@@ -58,8 +59,9 @@ export default function StagePage() {
   const done = stage.challenges.filter((c) => isChallengeCompleted(progress, c.id)).length;
   const allDone = done === stage.challenges.length;
 
-  function handleComplete(stars: number) {
+  function handleComplete(stars: number, dataUrl?: string) {
     if (!selected || !progress) return;
+    if (dataUrl) saveDrawing(selected.id, dataUrl);
     const prevLevel = getLevel(progress);
     const updated = completeChallenge(progress, selected.id, selected.xp, stars);
     const newLevel = getLevel(updated);
@@ -271,10 +273,10 @@ export default function StagePage() {
       {drawingChallenge && (
         <DrawingCanvas
           challenge={drawingChallenge}
-          onSubmit={(stars) => {
+          onSubmit={(stars, dataUrl) => {
             setSelected(drawingChallenge);
             setDrawingChallenge(null);
-            handleComplete(stars);
+            handleComplete(stars, dataUrl);
           }}
           onClose={() => setDrawingChallenge(null)}
         />

@@ -4,6 +4,7 @@ export interface CompletedChallenge {
   challengeId: string;
   completedAt: string;
   stars: number;
+  drawing?: string; // base64 PNG thumbnail
 }
 
 export interface UserProgress {
@@ -17,6 +18,33 @@ export interface UserProgress {
 }
 
 const STORAGE_KEY = "anisketch_progress";
+const DRAWINGS_KEY = "anisketch_drawings";
+
+// Drawings stored separately to keep progress lean
+export function saveDrawing(challengeId: string, dataUrl: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem(DRAWINGS_KEY);
+    const drawings: Record<string, string[]> = raw ? JSON.parse(raw) : {};
+    if (!drawings[challengeId]) drawings[challengeId] = [];
+    // Keep last 5 drawings per challenge
+    drawings[challengeId].unshift(dataUrl);
+    drawings[challengeId] = drawings[challengeId].slice(0, 5);
+    localStorage.setItem(DRAWINGS_KEY, JSON.stringify(drawings));
+  } catch {}
+}
+
+export function loadDrawings(): Record<string, string[]> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(DRAWINGS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+export function getDrawingsForChallenge(challengeId: string): string[] {
+  return loadDrawings()[challengeId] ?? [];
+}
 
 export function loadProgress(): UserProgress {
   if (typeof window === "undefined") return defaultProgress();

@@ -5,7 +5,7 @@ import type { Challenge } from "@/lib/data";
 
 interface Props {
   challenge: Challenge;
-  onSubmit: (stars: number) => void;
+  onSubmit: (stars: number, dataUrl: string) => void;
   onClose: () => void;
 }
 
@@ -516,6 +516,18 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
           <button onClick={undo}  className="px-2 py-1 rounded-lg text-xs bg-white/5 border border-white/10 text-white/40 hover:text-white transition-all">↩</button>
           <button onClick={redo}  className="px-2 py-1 rounded-lg text-xs bg-white/5 border border-white/10 text-white/40 hover:text-white transition-all">↪</button>
           <button onClick={clearCanvas} className="px-2 py-1 rounded-lg text-xs bg-white/5 border border-white/10 text-white/40 hover:text-red-400 transition-all">🗑</button>
+          <button
+            onClick={() => {
+              const oc = offscreen.current;
+              if (!oc) return;
+              const a = document.createElement("a");
+              a.href = oc.toDataURL("image/png");
+              a.download = `anisketch-${challenge.title.replace(/\s+/g,"-").toLowerCase()}.png`;
+              a.click();
+            }}
+            className="px-2 py-1 rounded-lg text-xs bg-white/5 border border-white/10 text-white/40 hover:text-white transition-all">
+            ⬇️
+          </button>
           <button onClick={() => hasDrawn && setShowRating(true)} disabled={!hasDrawn}
             className="px-3 py-1 rounded-lg text-xs font-bold text-white disabled:opacity-30 transition-all"
             style={{ background: "linear-gradient(135deg,#2baaee,#60a5fa)" }}>Submit ✓</button>
@@ -666,7 +678,12 @@ export default function DrawingCanvas({ challenge, onSubmit, onClose }: Props) {
                 className="flex-1 py-2.5 rounded-xl text-sm text-white/35 border border-white/10 hover:bg-white/5 transition-all">
                 Keep drawing
               </button>
-              <button onClick={() => selectedStars > 0 && onSubmit(selectedStars)}
+              <button onClick={() => {
+                if (selectedStars === 0) return;
+                const oc = offscreen.current;
+                const dataUrl = oc ? oc.toDataURL("image/jpeg", 0.7) : "";
+                onSubmit(selectedStars, dataUrl);
+              }}
                 disabled={selectedStars === 0}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-30 transition-all"
                 style={{ background: "linear-gradient(135deg,#2baaee,#60a5fa)" }}>
